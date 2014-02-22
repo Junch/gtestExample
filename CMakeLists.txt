@@ -2,16 +2,23 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.7 FATAL_ERROR)
 PROJECT(Test)
 
 # Required for gCov
-SET(CMAKE_BUILD_TYPE Debug)
+OPTION(coverage "Built with the gCov/lcov support." OFF)
 
 ADD_DEFINITIONS(
-  -g
-  -O0
-  -Wall
   -std=c++11
-  -fprofile-arcs    # Required for gCov
-  -ftest-coverage   # Required for gCov
 )
+
+IF (coverage)
+  SET(CMAKE_BUILD_TYPE Debug)
+
+  ADD_DEFINITIONS(
+    -g
+    -O0
+    -Wall
+    -fprofile-arcs    # Required for gCov
+    -ftest-coverage   # Required for gCov  
+  )
+ENDIF()
 
 # Enable ExternalProject CMake module
 INCLUDE(ExternalProject)
@@ -51,20 +58,25 @@ ADD_EXECUTABLE(MainTest ${PROJECT_SOURCE_DIR}/src/main.cpp)
 # Create dependency of MainTest on googlemock
 ADD_DEPENDENCIES(MainTest googlemock)
 
-# Required for gCov
-SET(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
-
 # Specify MainTest's link libraries
 FIND_PACKAGE(Threads)
 TARGET_LINK_LIBRARIES(MainTest gmock gmock_main ${CMAKE_THREAD_LIBS_INIT})
 
-# Configure Ctest
-ENABLE_TESTING()
-ADD_TEST(NAME MainTest COMMAND MainTest)
-
 # Code Coverage
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
-IF(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    INCLUDE(CodeCoverage)
-    SETUP_TARGET_FOR_COVERAGE(${PROJECT_NAME}_coverage MainTest coverage)
+IF (coverage)
+
+  # Required for gCov
+  SET(CMAKE_EXE_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
+
+  # Configure Ctest
+  ENABLE_TESTING()
+  ADD_TEST(NAME MainTest COMMAND MainTest)
+
+  # Code Coverage
+  SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
+  IF(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+      INCLUDE(CodeCoverage)
+      SETUP_TARGET_FOR_COVERAGE(${PROJECT_NAME}_coverage MainTest coverage)
+  ENDIF()
+
 ENDIF()
