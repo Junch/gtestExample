@@ -26,6 +26,7 @@ INCLUDE(ExternalProject)
 # Set default ExternalProject root directory
 SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/ThirdParty)
 
+# https://stackoverflow.com/questions/9689183/cmake-googletest
 # Add gtest
 EXTERNALPROJECT_ADD(
   googlemock
@@ -52,7 +53,19 @@ INCLUDE_DIRECTORIES(${source_dir}/googletest/include)
 # This link_directories needs to be BEFORE the add_executable
 EXTERNALPROJECT_GET_PROPERTY(googlemock binary_dir)
 MESSAGE(STATUS "googlemock binary_dir: ${binary_dir}")
-LINK_DIRECTORIES(${binary_dir}/googlemock)
+
+if (MSVC)
+  LINK_DIRECTORIES(${binary_dir}/googlemock/DebugLibs)
+else()
+  LINK_DIRECTORIES(${binary_dir}/googlemock)
+endif()
+
+#https://stackoverflow.com/questions/14172856/cmake-compile-with-mt-instead-of-md
+#https://msdn.microsoft.com/en-us/library/2kzt1wy3.aspx?f=255&MSPPError=-2147217396
+if(MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+endif()
 
 # Add test executable target
 ADD_EXECUTABLE(MainTest ${PROJECT_SOURCE_DIR}/src/main.cpp)
