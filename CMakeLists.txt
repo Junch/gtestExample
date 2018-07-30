@@ -68,16 +68,19 @@ ADD_DEPENDENCIES(MainTest googlemock)
 FIND_PACKAGE(Threads)
 
 if(NOT WIN32)
-  TARGET_LINK_LIBRARIES(MainTest gmock gmock_main)
+  TARGET_LINK_LIBRARIES(MainTest
+    ${binary_dir}/googlemock/libgmock.a
+    ${binary_dir}/googlemock/libgmock_main.a
+  )
 else()
   target_link_libraries(MainTest
-      debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
-      optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
-      )
+    debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
+    optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
+  )
   target_link_libraries(MainTest
-      debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
-      optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
-      )
+    debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
+    optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
+  )
 endif()
 
 TARGET_LINK_LIBRARIES(MainTest ${CMAKE_THREAD_LIBS_INIT})
