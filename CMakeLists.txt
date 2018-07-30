@@ -45,20 +45,11 @@ EXTERNALPROJECT_ADD(
   LOG_BUILD ON)
 
 # Specify include dir
-EXTERNALPROJECT_GET_PROPERTY(googlemock source_dir)
+EXTERNALPROJECT_GET_PROPERTY(googlemock source_dir binary_dir)
 MESSAGE(STATUS "googlemock source_dir: ${source_dir}")
+MESSAGE(STATUS "googlemock binary_dir: ${binary_dir}")
 INCLUDE_DIRECTORIES(${source_dir}/googlemock/include)
 INCLUDE_DIRECTORIES(${source_dir}/googletest/include)
-
-# This link_directories needs to be BEFORE the add_executable
-EXTERNALPROJECT_GET_PROPERTY(googlemock binary_dir)
-MESSAGE(STATUS "googlemock binary_dir: ${binary_dir}")
-
-if (MSVC)
-  LINK_DIRECTORIES(${binary_dir}/googlemock/DebugLibs)
-else()
-  LINK_DIRECTORIES(${binary_dir}/googlemock)
-endif()
 
 #https://stackoverflow.com/questions/14172856/cmake-compile-with-mt-instead-of-md
 #https://msdn.microsoft.com/en-us/library/2kzt1wy3.aspx?f=255&MSPPError=-2147217396
@@ -75,7 +66,21 @@ ADD_DEPENDENCIES(MainTest googlemock)
 
 # Specify MainTest's link libraries
 FIND_PACKAGE(Threads)
-TARGET_LINK_LIBRARIES(MainTest gmock gmock_main ${CMAKE_THREAD_LIBS_INIT})
+
+if(NOT WIN32)
+  TARGET_LINK_LIBRARIES(MainTest gmock gmock_main)
+else()
+  target_link_libraries(MainTest
+      debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
+      optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
+      )
+  target_link_libraries(MainTest
+      debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
+      optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
+      )
+endif()
+
+TARGET_LINK_LIBRARIES(MainTest ${CMAKE_THREAD_LIBS_INIT})
 
 # Code Coverage
 IF (coverage)
@@ -95,3 +100,11 @@ IF (coverage)
   ENDIF()
 
 ENDIF()
+
+# most valuable code, following is attached with a blog
+# https://github.com/kaizouman/gtest-cmake-example
+
+# Solve the build issue on windows
+# https://github.com/snikulov/google-test-examples
+
+# This repo which includes the code coverage
