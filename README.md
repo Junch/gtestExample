@@ -6,9 +6,9 @@ It is mostly for personal use.
 ## Use
 
 ```bash
-mkdir build
-cd build
-cmake ..
+mkdir _build
+cd _build
+cmake -Dcoverage=ON ..
 make
 make test
 ctest

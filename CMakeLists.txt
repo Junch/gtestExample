@@ -30,7 +30,7 @@ SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/ThirdParty)
 EXTERNALPROJECT_ADD(
   googlemock
   # SVN_REPOSITORY http://googletest.googlecode.com/svn/trunk/
-  URL ${PROJECT_SOURCE_DIR}/ext/gmock-1.7.0.zip
+  URL ${PROJECT_SOURCE_DIR}/ext/googletest-release-1.8.0.zip
   # Force separate output paths for debug and release builds to allow easy
   # identification of correct lib in subsequent TARGET_LINK_LIBRARIES commands
   CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
@@ -45,12 +45,14 @@ EXTERNALPROJECT_ADD(
 
 # Specify include dir
 EXTERNALPROJECT_GET_PROPERTY(googlemock source_dir)
-INCLUDE_DIRECTORIES(${source_dir}/include)
-INCLUDE_DIRECTORIES(${source_dir}/gtest/include)
+MESSAGE(STATUS "googlemock source_dir: ${source_dir}")
+INCLUDE_DIRECTORIES(${source_dir}/googlemock/include)
+INCLUDE_DIRECTORIES(${source_dir}/googletest/include)
 
 # This link_directories needs to be BEFORE the add_executable
 EXTERNALPROJECT_GET_PROPERTY(googlemock binary_dir)
-LINK_DIRECTORIES(${binary_dir})
+MESSAGE(STATUS "googlemock binary_dir: ${binary_dir}")
+LINK_DIRECTORIES(${binary_dir}/googlemock)
 
 # Add test executable target
 ADD_EXECUTABLE(MainTest ${PROJECT_SOURCE_DIR}/src/main.cpp)
