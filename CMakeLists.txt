@@ -20,69 +20,36 @@ IF (coverage)
   )
 ENDIF()
 
-# Enable ExternalProject CMake module
-INCLUDE(ExternalProject)
+SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
+GET_FILENAME_COMPONENT(DEPS_ROOT "${PROJECT_BINARY_DIR}/ThirdParty" ABSOLUTE)
 
-# Set default ExternalProject root directory
-SET_DIRECTORY_PROPERTIES(PROPERTIES EP_PREFIX ${CMAKE_BINARY_DIR}/ThirdParty)
-
-# https://stackoverflow.com/questions/9689183/cmake-googletest
-# Add gtest
-EXTERNALPROJECT_ADD(
-  googlemock
-  # SVN_REPOSITORY http://googletest.googlecode.com/svn/trunk/
-  URL ${PROJECT_SOURCE_DIR}/ext/googletest-release-1.8.0.zip
-  # Force separate output paths for debug and release builds to allow easy
-  # identification of correct lib in subsequent TARGET_LINK_LIBRARIES commands
-  CMAKE_ARGS -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-  -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
-  -Dgtest_force_shared_crt=OFF
-  # Disable install step
-  INSTALL_COMMAND ""
-  # Wrap download, configure and build steps in a script to log output
-  LOG_DOWNLOAD ON
-  LOG_CONFIGURE ON
-  LOG_BUILD ON)
-
-# Specify include dir
-EXTERNALPROJECT_GET_PROPERTY(googlemock source_dir binary_dir)
-MESSAGE(STATUS "googlemock source_dir: ${source_dir}")
-MESSAGE(STATUS "googlemock binary_dir: ${binary_dir}")
-INCLUDE_DIRECTORIES(${source_dir}/googlemock/include)
-INCLUDE_DIRECTORIES(${source_dir}/googletest/include)
-
-#https://stackoverflow.com/questions/14172856/cmake-compile-with-mt-instead-of-md
-#https://msdn.microsoft.com/en-us/library/2kzt1wy3.aspx?f=255&MSPPError=-2147217396
-if(MSVC)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-endif()
-
-# Add test executable target
-ADD_EXECUTABLE(MainTest ${PROJECT_SOURCE_DIR}/src/main.cpp)
-
-# Create dependency of MainTest on googlemock
-ADD_DEPENDENCIES(MainTest googlemock)
-
-# Specify MainTest's link libraries
 FIND_PACKAGE(Threads)
 
-if(NOT WIN32)
-  TARGET_LINK_LIBRARIES(MainTest
-    ${binary_dir}/googlemock/libgmock.a
-    ${binary_dir}/googlemock/libgmock_main.a
-  )
-else()
-  target_link_libraries(MainTest
-    debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
-    optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock${CMAKE_FIND_LIBRARY_SUFFIXES}
-  )
-  target_link_libraries(MainTest
-    debug ${binary_dir}/googlemock/DebugLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
-    optimized ${binary_dir}/googlemock/ReleaseLibs/${CMAKE_FIND_LIBRARY_PREFIXES}gmock_main${CMAKE_FIND_LIBRARY_SUFFIXES}
-  )
-endif()
+INCLUDE(ExtProjectUtils)
 
+IF(WIN32)
+    set(_OPT_CMAKE_ARGS "-Dgtest_force_shared_crt=ON;-DCMAKE_SH=CMAKE_SH-NOTFOUND")
+ELSE()
+    set(_OPT_CMAKE_ARGS "")
+ENDIF()
+
+# Will download external CMakeable project from git repo, branch "master" and install it in $DEPS_ROOT
+# This also will create "googletest.git" target, which we'll use as dependency for our test project
+ExtProjectGit("https://github.com/google/googletest.git" "master" ${DEPS_ROOT} CMAKE_ARGS "${_OPT_CMAKE_ARGS}")
+
+INCLUDE_DIRECTORIES("${DEPS_ROOT}/include")
+LINK_DIRECTORIES("${DEPS_ROOT}/lib")
+LINK_DIRECTORIES("${DEPS_ROOT}/lib64")
+
+#set(CMAKE_DEBUG_POSTFIX d)
+
+#SET_TARGET_PROPERTIES(mylib PROPERTIES DEBUG_POSTFIX "d")
+
+ADD_EXECUTABLE(MainTest ${PROJECT_SOURCE_DIR}/src/main.cpp)
+ADD_DEPENDENCIES(MainTest "googletest.git")
+TARGET_LINK_LIBRARIES(MainTest 
+                      debug gtestd       optimized gtest
+                      debug gtest_maind  optimized gtest_main)
 TARGET_LINK_LIBRARIES(MainTest ${CMAKE_THREAD_LIBS_INIT})
 
 # Code Coverage
@@ -96,7 +63,6 @@ IF (coverage)
   ADD_TEST(NAME MainTest COMMAND MainTest)
 
   # Code Coverage
-  SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
   IF(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
       INCLUDE(CodeCoverage)
       SETUP_TARGET_FOR_COVERAGE(${PROJECT_NAME}_coverage MainTest coverage)
